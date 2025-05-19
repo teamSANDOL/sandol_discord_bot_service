@@ -1,0 +1,21 @@
+{
+  "name": "sandol_discord_bot_service",
+  "version": "0.1.0",
+  "description": "산돌이 챗봇 중 디스코드 챗봇을 담당하는 서비스 입니다.",
+  "homepage": "https://github.com/teamSANDOL/sandol_discord_bot_service#readme",
+  "bugs": {
+    "url": "https://github.com/teamSANDOL/sandol_discord_bot_service/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/teamSANDOL/sandol_discord_bot_service.git"
+  },
+  "license": "ISC",
+  "author": "k1star",
+  "type": "commonjs",
+  "main": "index.js",
+  "scripts": {
+    "start":"node index.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
