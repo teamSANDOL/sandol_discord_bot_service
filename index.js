@@ -1,4 +1,6 @@
 const { Client, Events, GatewayIntentBits } = require('discord.js');
+const express = require('express');
+const app = express();
 
 const USE_BOT = process.env.USE_BOT === 'TRUE';
 
@@ -21,3 +23,9 @@ async function runBot() {
 
 if(USE_BOT) runBot();
 else console.log(`USE_BOT = ${USE_BOT}(${process.env.USE_BOT}) 봇을 사용하지 않습니다`);
+
+app.use('/discord-bot', require('./src/api'));
+
+app.listen(80, () => {
+    console.log('HTTP 서버 시작');
+});
