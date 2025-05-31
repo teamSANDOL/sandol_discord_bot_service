@@ -18,6 +18,10 @@ async function runBot() {
         console.log(`${readyClient.user.tag}로 로그인 완료`);
     });
 
+    client.on(Events.InteractionCreate, async interaction => {
+        await Command.onCommand(interaction);
+    });
+
     try {
         await client.login(TOKEN);
     } catch(e) {

@@ -62,7 +62,15 @@ async function depoly(TOKEN, APPLICATION_ID){
     console.log('명령어 업데이트 완료');
 }
 
+async function onCommand(interaction) {
+    const command=commands.find(c=>c.data.name==interaction.commandName);
+    if(command===undefined)return;
+
+    await command.execute(interaction);
+}
+
 module.exports = {
     commands,
     depoly,
+    onCommand,
 };
