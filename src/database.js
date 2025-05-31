@@ -1,5 +1,5 @@
 const sqlite3=require('better-sqlite3');
-const db=sqlite3(process.env.SQLITE_DATABASE_PATH);
+const db=sqlite3('./data/discord-bot.db');
 
 const packageVersion=process.env.npm_package_version;
 
