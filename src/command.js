@@ -21,7 +21,7 @@ async function depoly(TOKEN, APPLICATION_ID){
             deleteCommandInfo(id);
             console.log(` - ${name} (id: ${id}) (삭제)`);
         }else{
-            deleteCommandInfo(id);
+            await rest.delete(Routes.applicationCommand(APPLICATION_ID,id));
             console.log(` - ${name} (id: ${id}) (삭제) (데이터베이스에 없는 명령어)`);
         }
     }
