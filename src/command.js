@@ -2,6 +2,7 @@ const { REST, Routes, SlashCommandBuilder, EmbedBuilder } = require('discord.js'
 const {getCommandInfoByName,setCommandInfo,setCommandInfoJSON,deleteCommandInfo}=require('./database');
 
 const StaticInfo=require('./sandolapi/staticinfo');
+const Meal=require('./sandolapi/meal');
 
 const commands=[
     {
@@ -75,6 +76,46 @@ const commands=[
                     await interaction.reply({embeds:[embed]});
                 }
             }
+        }
+    },
+    {
+        data:new SlashCommandBuilder()
+            .setName('식단')
+            .setDescription('식단 출력'),
+        execute:async interaction=>{
+            await interaction.deferReply();
+            const meals=await Meal.getLatestMealList();
+            if(meals===null){
+                await interaction.editReply({content:'API 서버 오류'});
+                return;
+            }
+            const restaurant={};
+            meals.forEach(meal=>{
+                const restaurantId=meal.restaurant_id;
+                if(restaurant[restaurantId]===undefined)restaurant[restaurantId]=[meal];
+                else restaurant[restaurantId].push(meal);
+            });
+            let embeds=[];
+            const MEAL_TYPE=['breakfast', 'brunch', 'lunch', 'dinner'];
+            for(const restaurantId in restaurant){
+                const meals=restaurant[restaurantId];
+                meals.sort((a,b)=>MEAL_TYPE.indexOf(a.meal_type)-MEAL_TYPE.indexOf(b.meal_type));
+                const restaurantName=meals[0].restaurant_name;
+                const lastUpdateDate=new Date(meals.reduce((a,c)=>Math.max(a,new Date(c.updated_at).getTime()),0));
+
+                const embed=new EmbedBuilder()
+                    .setTitle(restaurantName)
+                    .setTimestamp(lastUpdateDate);
+                meals.forEach((meal)=>{
+                    embed.addFields({ 
+                        name: ['조식','브런치','중식','석식'][MEAL_TYPE.indexOf(meal.meal_type)],
+                        value: meal.menu.map(x=>'> '+x).join('\n'), 
+                        inline: false
+                    });
+                });
+                embeds.push(embed);
+            }
+            await interaction.editReply({embeds:embeds});
         }
     },
 ];
