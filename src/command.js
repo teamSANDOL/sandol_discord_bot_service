@@ -1,8 +1,30 @@
 const { REST, Routes, SlashCommandBuilder } = require('discord.js');
 const {getCommandInfoByName,setCommandInfo,setCommandInfoJSON,deleteCommandInfo}=require('./database');
 
+const StaticInfo=require('./sandolapi/staticinfo');
+
 const commands=[
-    
+    {
+        data:new SlashCommandBuilder()
+            .setName('셔틀')
+            .setDescription('셔틀버스 시간표 출력'),
+        execute:async interaction=>{
+            interaction.deferReply();
+            const images=await StaticInfo.getBusImagesBase64();
+            if(images===null){
+                interaction.reply({content:'API 서버 오류'});
+                return;
+            }
+            interaction.editReply({
+                files:images.map((base64,i)=>{
+                    return{
+                        attachment:Buffer.from(base64,'base64'),
+                        name:`${i}.jpeg`,
+                    }
+                })
+            });
+        }
+    }
 ];
 
 async function depoly(TOKEN, APPLICATION_ID){
@@ -15,14 +37,10 @@ async function depoly(TOKEN, APPLICATION_ID){
         const command=res[i];
         const id=command.id;
         const name=command.name;
-        const info=getCommandInfoByName(name);
-        if(info!==undefined){
+        if(!commands.some(x=>x.data.name==name)){
             await rest.delete(Routes.applicationCommand(APPLICATION_ID,id));
             deleteCommandInfo(id);
             console.log(` - ${name} (id: ${id}) (삭제)`);
-        }else{
-            await rest.delete(Routes.applicationCommand(APPLICATION_ID,id));
-            console.log(` - ${name} (id: ${id}) (삭제) (데이터베이스에 없는 명령어)`);
         }
     }
 
@@ -45,7 +63,7 @@ async function depoly(TOKEN, APPLICATION_ID){
             setCommandInfo(id,name,json);
         }else{
             id=info.id;
-            if(info.json!==json) {
+            if(info.json!==JSON.stringify(json)) {
                 reason='업데이트';
                 await rest.patch(
                     Routes.applicationCommand(APPLICATION_ID,id),
