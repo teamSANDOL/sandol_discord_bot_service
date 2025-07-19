@@ -1,4 +1,4 @@
-const { REST, Routes, SlashCommandBuilder } = require('discord.js');
+const { REST, Routes, SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const {getCommandInfoByName,setCommandInfo,setCommandInfoJSON,deleteCommandInfo}=require('./database');
 
 const StaticInfo=require('./sandolapi/staticinfo');
@@ -24,7 +24,59 @@ const commands=[
                 })
             });
         }
-    }
+    },
+    {
+        data:new SlashCommandBuilder()
+            .setName('org')
+            .setDescription('대학 조직 정보 조회')
+            .addStringOption(option=>
+                option.setName('orgname')
+                    .setDescription('조회 할 조직의 이름')
+                    .setAutocomplete(true)
+            ),
+        autocomplete:async interaction=>{
+            const orgCache=StaticInfo.getOrganizationTreeCache();
+            
+            const focusedOption = interaction.options.getFocused(true);
+            let focusValue=focusedOption.value;
+            let choices=[];
+
+            if(focusedOption.name=='orgname'&&orgCache!==null){
+                choices=orgCache.unitList.map(x=>x?.unit?.name).filter(x=>typeof x=='string');
+                focusValue=focusValue.trim();
+            }
+            
+            const filtered = choices.filter(choice => choice.startsWith(focusValue)).concat(choices.filter(choice => choice.includes(focusValue))).filter((x,i,a)=>a.indexOf(x)==i).slice(0,25);
+            await interaction.respond(
+                filtered.map(choice => ({ name: choice, value: String(choices.indexOf(choice)) })),
+            );
+        },
+        execute:async interaction=>{
+            const orgCache=StaticInfo.getOrganizationTreeCache();
+            if(orgCache===null){
+                await interaction.reply({content:'API 서버 오류'});
+            }else{
+                const orgName = interaction.options.getString('orgname');
+                const unitInfo=orgCache.unitList[Number(orgName)];
+                if(unitInfo===undefined){
+                    await interaction.reply({content:'잘못된 조직 값'});
+                }else{
+                    const embed=new EmbedBuilder()
+                        .setTitle(unitInfo.unit.name)
+                        .setAuthor({ name: unitInfo.path.join(' > ') });
+                    if(typeof unitInfo.unit.url=='string'){
+                        embed.setURL(unitInfo.unit.url);
+                    }
+                    if(typeof unitInfo.unit.phone=='string'){
+                        embed.addFields(
+                            { name: '전화번호', value: unitInfo.unit.phone },
+                        )
+                    }
+                    await interaction.reply({embeds:[embed]});
+                }
+            }
+        }
+    },
 ];
 
 async function depoly(TOKEN, APPLICATION_ID){
@@ -83,8 +135,11 @@ async function depoly(TOKEN, APPLICATION_ID){
 async function onCommand(interaction) {
     const command=commands.find(c=>c.data.name==interaction.commandName);
     if(command===undefined)return;
-
-    await command.execute(interaction);
+    if(interaction.isChatInputCommand()){
+        await command.execute(interaction);
+    }else if(interaction.isAutocomplete()){
+        await command.autocomplete(interaction);
+    }
 }
 
 module.exports = {
