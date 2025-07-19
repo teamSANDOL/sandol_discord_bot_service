@@ -12,7 +12,7 @@ const commands=[
             interaction.deferReply();
             const images=await StaticInfo.getBusImagesBase64();
             if(images===null){
-                interaction.reply({content:'API 서버 오류'});
+                interaction.editReply({content:'API 서버 오류'});
                 return;
             }
             interaction.editReply({
