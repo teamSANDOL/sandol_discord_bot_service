@@ -9,13 +9,13 @@ const commands=[
             .setName('셔틀')
             .setDescription('셔틀버스 시간표 출력'),
         execute:async interaction=>{
-            interaction.deferReply();
+            await interaction.deferReply();
             const images=await StaticInfo.getBusImagesBase64();
             if(images===null){
-                interaction.editReply({content:'API 서버 오류'});
+                await interaction.editReply({content:'API 서버 오류'});
                 return;
             }
-            interaction.editReply({
+            await interaction.editReply({
                 files:images.map((base64,i)=>{
                     return{
                         attachment:Buffer.from(base64,'base64'),
