@@ -15,14 +15,10 @@ async function depoly(TOKEN, APPLICATION_ID){
         const command=res[i];
         const id=command.id;
         const name=command.name;
-        const info=getCommandInfoByName(name);
-        if(info!==undefined){
+        if(!commands.some(x=>x.data.name==name)){
             await rest.delete(Routes.applicationCommand(APPLICATION_ID,id));
             deleteCommandInfo(id);
             console.log(` - ${name} (id: ${id}) (삭제)`);
-        }else{
-            await rest.delete(Routes.applicationCommand(APPLICATION_ID,id));
-            console.log(` - ${name} (id: ${id}) (삭제) (데이터베이스에 없는 명령어)`);
         }
     }
 
@@ -45,7 +41,7 @@ async function depoly(TOKEN, APPLICATION_ID){
             setCommandInfo(id,name,json);
         }else{
             id=info.id;
-            if(info.json!==json) {
+            if(info.json!==JSON.stringify(json)) {
                 reason='업데이트';
                 await rest.patch(
                     Routes.applicationCommand(APPLICATION_ID,id),
