@@ -3,6 +3,7 @@ const {getCommandInfoByName,setCommandInfo,setCommandInfoJSON,deleteCommandInfo}
 
 const StaticInfo=require('./sandolapi/staticinfo');
 const Meal=require('./sandolapi/meal');
+const ClassroomTimetable=require('./sandolapi/classroomtimetable');
 
 const commands=[
     {
@@ -116,6 +117,122 @@ const commands=[
                 embeds.push(embed);
             }
             await interaction.editReply({embeds:embeds});
+        }
+    },
+    {
+        data:new SlashCommandBuilder()
+            .setName('timetable')
+            .setDescription('강의실 시간표 조회')
+            .addStringOption(option=>
+                option.setName('building')
+                    .setDescription('조회 할 강의실 건물의 이름')
+                    .setRequired(true)
+                    .setAutocomplete(true)
+            )
+            .addStringOption(option=>
+                option.setName('classroom')
+                    .setDescription('조회 할 강의실의 이름')
+                    .setRequired(true)
+                    .setAutocomplete(true)
+            )
+            .addStringOption(option=>
+                option.setName('day')
+                    .setDescription('조회 할 요일')
+                    .addChoices(
+                        { name: '월요일', value: '0' },
+                        { name: '화요일', value: '1' },
+                        { name: '수요일', value: '2' },
+                        { name: '목요일', value: '3' },
+                        { name: '금요일', value: '4' },
+                        { name: '토요일', value: '5' },
+                        { name: '일요일', value: '6' },
+				    )
+            ),
+        autocomplete:async interaction=>{
+            const classroomList=await ClassroomTimetable.getClassroomList();
+            
+            const focusedOption = interaction.options.getFocused(true);
+            let focusValue=focusedOption.value;
+            let choices=[],filtered=[];
+
+            if(focusedOption.name=='building'){
+                choices=classroomList.map(x=>x.building);
+                focusValue=focusValue.trim();
+                filtered = choices.filter(choice => choice.toLowerCase().startsWith(focusValue.toLowerCase())).concat(choices.filter(choice => choice.toLowerCase().includes(focusValue.toLowerCase()))).filter((x,i,a)=>a.indexOf(x)==i).slice(0,25);
+            }else if(focusedOption.name=='classroom'){
+                let buildingIndex=interaction.options.getString('building');
+                if(buildingIndex===null){
+                    await interaction.respond([
+                        {
+                            name:'building을 먼저 선택해야 합니다.',
+                            value:'null',
+                        }
+                    ]);
+                    return;
+                }
+                buildingIndex=Number(buildingIndex);
+                choices=classroomList?.[buildingIndex]?.classrooms??[];
+                focusValue=focusValue.trim();
+                if(focusValue.search(/[가-힣]/)==-1){
+                    filtered = choices.filter(choice => choice.toLowerCase().startsWith(focusValue.toLowerCase())).slice(0,25);
+                }else{
+                    filtered = choices.filter(choice => choice.toLowerCase().startsWith(focusValue.toLowerCase())).concat(choices.filter(choice => choice.toLowerCase().includes(focusValue.toLowerCase()))).filter((x,i,a)=>a.indexOf(x)==i).slice(0,25);
+                }
+            }
+            
+            await interaction.respond(
+                filtered.map(choice => ({ name: choice, value: String(choices.indexOf(choice)) })),
+            );
+        },
+        execute:async interaction=>{
+            await interaction.deferReply();
+            const classroomList=await ClassroomTimetable.getClassroomList();
+            if(classroomList===null){
+                await interaction.editReply({content:'API 서버 오류'});
+            }else{
+                const buildingIndex = interaction.options.getString('building');
+                const classroomIndex = interaction.options.getString('classroom');
+                const dayIndex = interaction.options.getString('day');
+                const buildingInfo=classroomList[buildingIndex];
+                if(buildingInfo===undefined){
+                    await interaction.editReply('잘못된 building 입력');
+                }else if(buildingInfo.classrooms[classroomIndex]===undefined){
+                    await interaction.editReply('잘못된 classroom 입력');
+                }else{
+                    const placeName = buildingInfo.building+buildingInfo.classrooms[classroomIndex];
+                    const timetable=await ClassroomTimetable.getClassroomTimetable(placeName,dayIndex===null?null:['월요일','화요일','수요일','목요일','금요일','토요일','일요일'][Number(dayIndex)]);
+                    if(dayIndex===null){
+                        await interaction.editReply(`${placeName} 시간표\n▪️▪️ :regional_indicator_m: :regional_indicator_t: :regional_indicator_w: :regional_indicator_t: :regional_indicator_f: :regional_indicator_s: :regional_indicator_s:\n${
+                            (()=>{
+                                const nums=['0️⃣',':one:',':two:',':three:',':four:',':five:',':six:',':seven:',':eight:',':nine:'];
+                                const colors=['🟧','🟦','🟥','🟫','🟪','🟩','🟨'];
+                                let str='';
+                                for(let i=1;i<=14;i++){
+                                    if(i!=1)str+='\n';
+                                    str+=i.toString().padStart(2,'x').replace('x','▪️').replace(/\d/g,n=>nums[n])+' ';
+                                    for(let j=0;j<7;j++){
+                                        if(j!=0)str+=' ';
+                                        str+=colors?.[timetable.findIndex(x=>'월화수목금토일'.indexOf(x.day)==j&&x.periodStart<=i&&i<=x.periodEnd)%colors.length]??'▪️';
+                                    }
+                                }
+                                return str;
+                            })()
+                        }`);
+                    }else{
+                        function timeToStr(n){
+                            return String(Math.floor(n/60))+':'+String(n%60).padStart(2,'0');
+                        }
+                        let embeds=timetable.map(x=>{
+                            const embed=new EmbedBuilder()
+                                .setTitle(x.cs)
+                                .setDescription(`${timeToStr(x.startTime)} ~ ${timeToStr(x.endTime)} (${x.periodStart} ~ ${x.periodEnd})`)
+                                .setAuthor({name:x.prof});
+                            return embed;
+                        });
+                        await interaction.editReply({content:`${placeName} ${['월요일','화요일','수요일','목요일','금요일','토요일','일요일'][Number(dayIndex)]} 시간표`,embeds:embeds});
+                    }
+                }
+            }
         }
     },
 ];
