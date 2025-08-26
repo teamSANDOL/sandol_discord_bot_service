@@ -41,7 +41,40 @@ async function getClassroomTimetable(place,day=null){
     }
 }
 
+async function getEmptyClassroomNow(date,minute=0,building){
+    const endDate=new Date(date);
+    endDate.setMinutes(endDate.getMinutes()+minute);
+    if(endDate.getDate()>date.getDate()){
+        endDate.setDate(date.getDate());
+        endDate.setHours(23,59,59);
+    }
+    const params={
+        day:'월화수목금토일'[date.getDay()]+'요일',
+        start_time:`${date.getHours()}:${date.getMinutes()}`,
+        end_time:`${endDate.getHours()}:${endDate.getMinutes()}`,
+    };
+    if(building!==undefined){
+        params.building=building;
+    }
+    const response=await fetch(
+        SERVICE_URL+'/classrooms/available/time?'+new URLSearchParams(params).toString(),
+        {
+            method:'GET',
+        }
+    );
+    if(response.status!=200){
+        return null;
+    }
+
+    try{
+        return await response.json();
+    }catch{
+        return null;
+    }
+}
+
 module.exports={
     getClassroomList,
     getClassroomTimetable,
+    getEmptyClassroomNow,
 };

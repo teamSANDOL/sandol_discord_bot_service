@@ -1,3 +1,5 @@
+process.env.TZ='Asia/Seoul';
+
 const { Client, Events, GatewayIntentBits } = require('discord.js');
 const Command = require('./src/command');
 

@@ -235,6 +235,59 @@ const commands=[
             }
         }
     },
+    {
+        data:new SlashCommandBuilder()
+            .setName('emptyroom')
+            .setDescription('현재 빈 강의실 조회')
+            .addNumberOption(option=>
+                option.setName('minute')
+                    .setDescription('비어 있는 시간')
+                    .setRequired(false)
+                    .setMinValue(0)
+                    .setMaxValue(60*24)
+            )
+            .addStringOption(option=>
+                option.setName('building')
+                    .setDescription('조회 할 강의실 건물의 이름')
+                    .setRequired(false)
+                    .setAutocomplete(true)
+            ),
+        autocomplete:async interaction=>{
+            const classroomList=await ClassroomTimetable.getClassroomList();
+            
+            const focusedOption = interaction.options.getFocused(true);
+            let focusValue=focusedOption.value;
+            let choices=[],filtered=[];
+
+            if(focusedOption.name=='building'){
+                choices=classroomList.map(x=>x.building);
+                focusValue=focusValue.trim();
+                filtered = choices.filter(choice => choice.toLowerCase().startsWith(focusValue.toLowerCase())).concat(choices.filter(choice => choice.toLowerCase().includes(focusValue.toLowerCase()))).filter((x,i,a)=>a.indexOf(x)==i).slice(0,25);
+            }
+            
+            await interaction.respond(
+                filtered.map(choice => ({ name: choice, value: String(choices.indexOf(choice)) })),
+            );
+        },
+        execute:async interaction=>{
+            await interaction.deferReply();
+            const classroomList=await ClassroomTimetable.getClassroomList();
+            if(classroomList===null){
+                await interaction.editReply({content:'API 서버 오류'});
+            }else{
+                const buildingIndex = interaction.options.getString('building');
+                const emptyMinute = interaction.options.getNumber('minute');
+                const buildingName=classroomList?.[buildingIndex]?.building??undefined;
+                const emptyBuildingList=await ClassroomTimetable.getEmptyClassroomNow(new Date(),emptyMinute,buildingName);
+
+                let emptyClassroomList=[];
+                emptyBuildingList.forEach(({building,empty_classrooms})=>{
+                    emptyClassroomList.push(...empty_classrooms.map(x=>({building,classroom:x})));
+                });
+                await interaction.editReply({content:emptyClassroomList.map(x=>x.building+' '+x.classroom).join('\n')});
+            }
+        }
+    },
 ];
 
 async function depoly(TOKEN, APPLICATION_ID){
@@ -273,6 +326,7 @@ async function depoly(TOKEN, APPLICATION_ID){
             setCommandInfo(id,name,json);
         }else{
             id=info.id;
+            console.log(id)
             if(info.json!==JSON.stringify(json)) {
                 reason='업데이트';
                 await rest.patch(
