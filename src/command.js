@@ -63,9 +63,10 @@ const commands=[
                 if(unitInfo===undefined){
                     await interaction.reply({content:'잘못된 조직 값'});
                 }else{
+                    let pathString=unitInfo.path.join(' > ');
                     const embed=new EmbedBuilder()
-                        .setTitle(unitInfo.unit.name)
-                        .setAuthor({ name: unitInfo.path.join(' > ') });
+                        .setTitle(unitInfo.unit.name);
+                    if(pathString.length!=0)embed.setAuthor({ name: pathString });
                     if(typeof unitInfo.unit.url=='string'){
                         embed.setURL(unitInfo.unit.url);
                     }
