@@ -1,6 +1,11 @@
 const sqlite3=require('better-sqlite3');
 const db=sqlite3('./data/discord-bot.db');
 
+process.on('exit', () => db.close());
+process.on('SIGHUP', () => process.exit(128 + 1));
+process.on('SIGINT', () => process.exit(128 + 2));
+process.on('SIGTERM', () => process.exit(128 + 15));
+
 const packageVersion=process.env.npm_package_version;
 
 if(packageVersion===undefined){
@@ -43,7 +48,7 @@ const stmtSelectCommandInfoById=db.prepare(`SELECT * FROM command_info WHERE id 
 const stmtSelectCommandInfoByName=db.prepare(`SELECT * FROM command_info WHERE name = ?;`).safeIntegers(true);
 const stmtUpsertCommandInfo=db.prepare(`INSERT INTO command_info(id,name,json) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,json=excluded.json;`);
 const stmtUpsertCommandInfoName=db.prepare(`INSERT INTO command_info(id,name) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name;`);
-const stmtUpsertCommandInfoJSON=db.prepare(`UPDATE command_info SET json=jsonb(?) WHERE id=?;`);
+const stmtUpsertCommandInfoJSON=db.prepare(`UPDATE command_info SET json=? WHERE id=?;`);
 const stmtDeleteCommandInfo=db.prepare(`DELETE FROM command_info WHERE id = ?;`);
 
 function getCommandInfo(){
@@ -69,7 +74,7 @@ function setCommandInfoName(id,name){
 }
 
 function setCommandInfoJSON(id,json){
-    stmtUpsertCommandInfoJSON.run(id,JSON.stringify(json));
+    stmtUpsertCommandInfoJSON.run(JSON.stringify(json),id);
 }
 
 function deleteCommandInfo(id){
