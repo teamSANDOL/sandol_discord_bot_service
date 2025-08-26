@@ -40,10 +40,10 @@ databaseUpdate();
 
 const stmtSelectCommandInfo=db.prepare(`SELECT * FROM command_info;`);
 const stmtSelectCommandInfoById=db.prepare(`SELECT * FROM command_info WHERE id = ?;`);
-const stmtSelectCommandInfoByName=db.prepare(`SELECT * FROM command_info WHERE name = ?;`);
+const stmtSelectCommandInfoByName=db.prepare(`SELECT * FROM command_info WHERE name = ?;`).safeIntegers(true);
 const stmtUpsertCommandInfo=db.prepare(`INSERT INTO command_info(id,name,json) VALUES(?,?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name,json=excluded.json;`);
 const stmtUpsertCommandInfoName=db.prepare(`INSERT INTO command_info(id,name) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET name=excluded.name;`);
-const stmtUpsertCommandInfoJSON=db.prepare(`INSERT INTO command_info(id,json) VALUES(?,?) ON CONFLICT(id) DO UPDATE SET json=jsonb(excluded.json);`);
+const stmtUpsertCommandInfoJSON=db.prepare(`UPDATE command_info SET json=jsonb(?) WHERE id=?;`);
 const stmtDeleteCommandInfo=db.prepare(`DELETE FROM command_info WHERE id = ?;`);
 
 function getCommandInfo(){
@@ -55,7 +55,9 @@ function getCommandInfoById(id){
 }
 
 function getCommandInfoByName(name){
-    return stmtSelectCommandInfoByName.get(name);
+    const res=stmtSelectCommandInfoByName.get(name);
+    res.id=String(res.id);
+    return res;
 }
 
 function setCommandInfo(id,name,json){
